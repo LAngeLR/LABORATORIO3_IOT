@@ -17,6 +17,10 @@
         android:theme="@style/Theme.Laboratorio3_IOT"
         tools:targetApi="31">
         <activity
+            android:name=".ContadorPrimosActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

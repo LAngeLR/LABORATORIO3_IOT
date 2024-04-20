@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Laboratorio3_IOT</string>
+    <string name="mensaje_principal">Contador Números Primos. Podrá visualizar los primeros 999 números primos</string>
+    <string name="visualizar">Visualizar</string>
+    <string name="mensaje1">Bienvenido al buscador de películas</string>
+    <string name="buscar">Buscar</string>
+    <string name="mensaje2">idPelicula(IMDb)</string>
 </resources>

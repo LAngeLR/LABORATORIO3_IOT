@@ -94,6 +94,7 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Error al obtener la película", Toast.LENGTH_SHORT).show();
                 }
             }
+
             @Override
             public void onFailure(Call<Pelicula> call, Throwable t) {
                 Toast.makeText(MainActivity.this, "Error de red: " + t.getMessage(), Toast.LENGTH_SHORT).show();
@@ -101,10 +102,15 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
     private void mostrarPelicula(Pelicula pelicula) {
-        Intent intent = new Intent(MainActivity.this, ObtenerPeliculaActivity.class);
-        intent.putExtra("pelicula", pelicula);
-        startActivity(intent);
+        if (pelicula != null && pelicula.getTitle() != null) {
+            Intent intent = new Intent(MainActivity.this, ObtenerPeliculaActivity.class);
+            intent.putExtra("pelicula", pelicula);
+            startActivity(intent);
+        } else {
+            Toast.makeText(MainActivity.this, "id de la pelicula no encontrado", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private boolean isConnectedToInternet() {

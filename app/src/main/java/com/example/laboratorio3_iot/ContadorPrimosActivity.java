@@ -26,13 +26,16 @@ public class ContadorPrimosActivity extends AppCompatActivity {
 
     private EditText ordenEditText;
     private TextView primoTextView;
+    private TextView estadoTextView;
     private boolean isCounting = false;
     private boolean isAscending = true;
-
+    private boolean isDescending = false;
     private Button iniciarDetenerButton;
+    private Button cambiarDireccionButton;
     private int contador = 0;
     private List<NumeroPrimo> numerosPrimos;
     private int ultimoIndicePausa = 0;
+    private Thread contadorThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,7 +45,10 @@ public class ContadorPrimosActivity extends AppCompatActivity {
         ordenEditText = findViewById(R.id.editTextText2);
         primoTextView = findViewById(R.id.textView4);
         iniciarDetenerButton = findViewById(R.id.button3);
-        iniciarDetenerButton.setText("REINICIAR");
+        iniciarDetenerButton.setText("PAUSAR");
+        cambiarDireccionButton = findViewById(R.id.button4);
+        cambiarDireccionButton.setText("DESCENDER");
+        estadoTextView = findViewById(R.id.textView7);
 
         Button buscarButton = findViewById(R.id.buscarOrden);
         buscarButton.setOnClickListener(new View.OnClickListener() {
@@ -52,7 +58,6 @@ public class ContadorPrimosActivity extends AppCompatActivity {
                 obtenerNumerosPrimos();
             }
         });
-
         iniciarDetenerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -63,16 +68,16 @@ public class ContadorPrimosActivity extends AppCompatActivity {
                 }
             }
         });
-
-        Button cambiarDireccionButton = findViewById(R.id.button4);
         cambiarDireccionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 cambiarDireccionConteo();
             }
         });
-    }
 
+        cambiarDireccionButton.setVisibility(View.GONE);
+        estadoTextView.setText("");
+    }
     private void obtenerNumerosPrimos() {
         OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(PrimoWorker.class).build();
         WorkManager.getInstance(this).enqueue(workRequest);
@@ -101,7 +106,6 @@ public class ContadorPrimosActivity extends AppCompatActivity {
                     }
                 });
     }
-
     public void buscarNumeroPrimo() {
         int orden = Integer.parseInt(ordenEditText.getText().toString());
         PrimoService primoService = RetrofitClient.getRetrofitInstance().create(PrimoService.class);
@@ -114,7 +118,6 @@ public class ContadorPrimosActivity extends AppCompatActivity {
                     int primoEncontrado = encontrarNumeroPrimo(numerosPrimos, orden);
                     primoTextView.setText(String.valueOf(primoEncontrado));
                 } else {
-
                 }
             }
 
@@ -124,7 +127,6 @@ public class ContadorPrimosActivity extends AppCompatActivity {
             }
         });
     }
-
     private int encontrarNumeroPrimo(List<NumeroPrimo> numerosPrimos, int orden) {
         for (NumeroPrimo numeroPrimo : numerosPrimos) {
             if (numeroPrimo.getOrder() == orden) {
@@ -133,30 +135,34 @@ public class ContadorPrimosActivity extends AppCompatActivity {
         }
         return -1;
     }
-
-
     private void iniciarContador() {
         isCounting = true;
         iniciarDetenerButton.setText("PAUSAR");
-        contador = encontrarIndicePrimo(numerosPrimos, Integer.parseInt(ordenEditText.getText().toString())); // Obtener el índice del número de orden ingresado
+        cambiarDireccionButton.setVisibility(View.VISIBLE);
+        contador = encontrarIndicePrimo(numerosPrimos, Integer.parseInt(ordenEditText.getText().toString()));
         if (contador != -1) {
-            new Thread(() -> {
-                while (isCounting && contador < numerosPrimos.size()) {
+            contadorThread = new Thread(() -> {
+                while (isCounting && contador >= 0 && contador < numerosPrimos.size()) {
                     try {
                         Thread.sleep(1000);
                         runOnUiThread(() -> {
                             primoTextView.setText(String.valueOf(numerosPrimos.get(contador).getNumber()));
                         });
-                        contador++;
+                        if (isDescending) {
+                            contador--;
+                        } else {
+                            contador++;
+                        }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        return;
                     }
                 }
-            }).start();
+            });
+            contadorThread.start();
         } else {
         }
     }
-
     private int encontrarIndicePrimo(List<NumeroPrimo> numerosPrimos, int orden) {
         for (int i = 0; i < numerosPrimos.size(); i++) {
             if (numerosPrimos.get(i).getOrder() == orden) {
@@ -165,40 +171,61 @@ public class ContadorPrimosActivity extends AppCompatActivity {
         }
         return -1;
     }
-
     private void detenerContador() {
         isCounting = false;
         ultimoIndicePausa = contador;
         iniciarDetenerButton.setText("REINICIAR");
+        cambiarDireccionButton.setVisibility(View.GONE);
+        estadoTextView.setText("El contador actualmente está en pausa");
+        if (contadorThread != null) {
+            contadorThread.interrupt();
+        }
         WorkManager.getInstance(this).cancelAllWork();
     }
-
     public void cambiarDireccionConteo() {
-        isAscending = !isAscending;
-        if (isCounting) {
-            detenerContador();
-            iniciarContador();
+        isDescending = !isDescending;
+        Button cambiarDireccionButton = findViewById(R.id.button4);
+        if (isDescending) {
+            cambiarDireccionButton.setText("ASCENDER");
+            estadoTextView.setText("El contador actualmente está descendiendo");
+        } else {
+            cambiarDireccionButton.setText("DESCENDER");
+            estadoTextView.setText("El contador actualmente está ascendiendo");
         }
     }
-
     private void reiniciarContador() {
         isCounting = true;
         iniciarDetenerButton.setText("PAUSAR");
+        cambiarDireccionButton.setVisibility(View.VISIBLE);
         if (contador != -1 && contador < numerosPrimos.size()) {
             contador = ultimoIndicePausa;
-            new Thread(() -> {
-                while (isCounting && contador < numerosPrimos.size()) {
+            if (contadorThread != null) {
+                contadorThread.interrupt();
+            }
+            contadorThread = new Thread(() -> {
+                while (isCounting && contador >= 0 && contador < numerosPrimos.size()) {
                     try {
                         Thread.sleep(1000);
                         runOnUiThread(() -> {
                             primoTextView.setText(String.valueOf(numerosPrimos.get(contador).getNumber()));
                         });
-                        contador++;
+                        if (isDescending) {
+                            contador--;
+                        } else {
+                            contador++;
+                        }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        return;
                     }
                 }
-            }).start();
+            });
+            contadorThread.start();
+            if (isDescending) {
+                estadoTextView.setText("El contador actualmente está descendiendo");
+            } else {
+                estadoTextView.setText("El contador actualmente está ascendiendo");
+            }
         } else {
             iniciarContador();
         }
